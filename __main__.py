@@ -1,6 +1,7 @@
 import argparse
 import tensorflow as tf
 import numpy as np
+from tensorflow.python import Constant
 
 from EmbeddingHandler import EmbeddingHandler
 from TxtUtilities import getAuthorsAndFiles
@@ -12,12 +13,14 @@ from TokenUtilities import tokenize
 def main():
     args = getParsedArgs()
 
-    authorFilesTrain, authorsTrain = getAuthorsAndFiles(f"{args.language}\\{args.training}")
-    authorFilesTest, authorsTest = getAuthorsAndFiles(f"{args.language}\\{args.test}")
+    dataDir = f"{args.directory}\\{args.language}"
+
+    authorFilesTrain, authorsTrain = getAuthorsAndFiles(f"{dataDir}\\{args.training}")
+    authorFilesTest, authorsTest = getAuthorsAndFiles(f"{dataDir}\\{args.test[0]}")
 
     labelsTrain = getLabels(authorsTrain)
     authorTweetListTrain = getTweets(
-        authorFilesTrain
+        authorFilesTrain, dataDir
     )  # tweetsList - list of tweets of all authors
     authorTokenListTrain = getTokens(
         authorTweetListTrain
@@ -25,14 +28,14 @@ def main():
 
     labelsTest = getLabels(authorsTest)
     authorTweetListTest = getTweets(
-        authorFilesTest
+        authorFilesTest, dataDir
     )  # tweetsList - list of tweets of all authors
     authorTokenListTest = getTokens(
         authorTweetListTest
     )  # tokensList - list of tokenized tweets of all authors
 
     embeddingsHandler = EmbeddingHandler(
-        filename=args.embedding, filePath=args.directory
+        filename=args.embeddings, filePath=args.directory
     )
     embeddingsHandler.loadEmbeddings()
     # embeddings = getEmbeddings(authorTokenListTrain, embeddingsHandler)
@@ -43,25 +46,42 @@ def main():
     vocabularyLength = vectorizer.getVocabularyLength()
     embeddingMatrix = getEmbeddingMatrix(embeddingsHandler, vectorizer)
 
+    keras1 = tf.keras.preprocessing.sequence.pad_sequences(vectorizedTextsTrain, maxlen=5000, padding="post")
+    keras2 = tf.keras.preprocessing.sequence.pad_sequences(vectorizedTextsTest, maxlen=5000, padding="post")
+
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Embedding(vocabularyLength,
-                                        embeddingsHandler.embeddingsDim,
-                                        embeddings_initializer=tf.keras.layers.Constant(embeddingMatrix),
-                                        trainable=True))
+    model.add(
+        tf.keras.layers.Embedding(
+            vocabularyLength,
+            embeddingsHandler.embeddingsDim,
+            embeddings_initializer=Constant(embeddingMatrix),
+            trainable=True,
+        )
+    )
     model.add(tf.keras.layers.LSTM(128))
-    model.add(tf.keras.layers.Dense(128, activation="relu"))
-    model.add(tf.keras.layers.Dense(64, activation="relu"))
-    model.compile(optimizer="adam")
-    model.fit(x=vectorizedTextsTrain, y=np.array(labelsTrain),
-              validation_data=(vectorizedTextsTest, labelsTest),
-              batch_size=2880, epochs=5)
+    # model.add(tf.keras.layers.LSTM(64))
+    model.add(tf.keras.layers.Dense(32, activation="relu"))
+    model.add(tf.keras.layers.Dense(2, activation="relu"))
+    # model.compile(optimizer=tf.keras.optimizers.RMSprop(clipvalue=1.0), loss='mae')
+    # It actually probably f... works.
+
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.fit(
+        x=keras1,
+        y=np.array(labelsTrain),
+        validation_data=(keras2, np.array(labelsTest)),
+        batch_size=16,
+        epochs=3,
+    )
+    scores = model.evaluate(keras2, np.array(labelsTest), verbose=0)
+    print("Accuracy: %.2f%%" % (scores[1] * 100))
 
 
-def getTweets(authorFileList):
+def getTweets(authorFileList, path):
     tweets = list()
 
     for authorFile in authorFileList:
-        tweets.append(parseXml(authorFile))
+        tweets.append(parseXml(authorFile, path=path))
     return tweets
 
 
@@ -74,12 +94,13 @@ def getTokens(authorTweetList):
 
 
 def getEmbeddingMatrix(embeddingHandler, vectorizer):
-    embeddingMatrix = np.zeros((vectorizer.getVocabularyLength(), embeddingHandler.embeddingsDim))
+    embeddingMatrix = np.zeros(
+        (vectorizer.getVocabularyLength(), embeddingHandler.embeddingsDim)
+    )
 
     for word, index in vectorizer.vocabulary.items():
         embeddingVector = embeddingHandler.getOrCreateEmbedding(word)
         embeddingMatrix[index] = embeddingVector
-
     return embeddingMatrix
 
 
@@ -103,7 +124,7 @@ def getEmbeddings(authorTokensList, embeddingHandler):
 
 
 def getLabels(authors):
-    return [1 if author is "bot" else 0 for author in authors]
+    return [1 if author == u"bot" else 0 for author in authors]
 
 
 def getParsedArgs():
@@ -118,6 +139,7 @@ def getParsedArgs():
         "-e", "--embeddings", help="File containing pre-trained embeddings"
     )
     parser.add_argument("-t", "--training", help="File containing training dataset")
+    parser.add_argument("-q", "--quiet", help="Argument responsible for the visible spam in logs")
     parser.add_argument("test", nargs="*", help="File containing test dataset")
     return parser.parse_args()
 

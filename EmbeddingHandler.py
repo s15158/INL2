@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class EmbeddingHandler(object):
     def __init__(self, filename, filePath=None):
         self.embeddingsDict = dict()
@@ -25,7 +26,7 @@ class EmbeddingHandler(object):
             for line in f:
                 values = line.split()
                 word = values[0]
-                coefficients = np.array(values[1:], dtype='float32')
+                coefficients = np.array(values[1:], dtype="float32")
                 self.embeddingsDict[word] = coefficients
             self.embeddingsDim = coefficients.size
 

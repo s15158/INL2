@@ -1,10 +1,8 @@
 class Vectorizer(object):
-
     def __init__(self):
         self.vocabulary = None
 
     def loadVocabulary(self, trainTexts):
-
         self.vocabulary = dict()
         indexCounter = 0
         vectorizedTexts = []
@@ -20,7 +18,7 @@ class Vectorizer(object):
                     vectorizedText.append(self.vocabulary.get(word))
             vectorizedTexts.append(vectorizedText)
 
-        self.vocabulary['<unk>'] = indexCounter
+        self.vocabulary["<unk>"] = 0
 
         return vectorizedTexts
 
@@ -34,7 +32,7 @@ class Vectorizer(object):
                 for word in tweet:
                     wordIndex = self.vocabulary.get(word)
                     if not wordIndex:
-                        wordIndex = self.vocabulary.get('<unk>')
+                        wordIndex = self.vocabulary.get("<unk>")
                     vectorizedText.append(wordIndex)
             vectorizedTexts.append(vectorizedText)
 
