@@ -4,8 +4,7 @@
 def getAuthorsAndFiles(filename, path=None):
     import os
 
-    filenames = list()
-    authors = list()
+    authorFiles = list()
 
     if path is None:
         path = os.getcwd()
@@ -13,6 +12,5 @@ def getAuthorsAndFiles(filename, path=None):
     with open(f"{path}\\{filename}", "r") as f:
         for line in f:
             values = line.split(":::")
-            filenames.append(values[0])
-            authors.append(values[1])
-    return filenames, authors
+            authorFiles.append([values[0], values[1]])
+    return authorFiles
