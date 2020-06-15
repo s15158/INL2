@@ -1,2 +1,4 @@
+emoji
+matplotlib
 numpy
 tensorflow
