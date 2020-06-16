@@ -25,9 +25,10 @@ class EmbeddingHandler(object):
         with open(self.filename, "r", encoding="utf8") as f:
             for line in f:
                 values = line.split()
-                word = values[0]
-                coefficients = np.array(values[1:], dtype="float32")
-                self.embeddingsDict[word] = coefficients
+                if len(values) >= 25:
+                    word = values[0]
+                    coefficients = np.array(values[1:], dtype="float32")
+                    self.embeddingsDict[word] = coefficients
             self.embeddingsDim = coefficients.size
 
     def getOrCreateEmbedding(self, word):

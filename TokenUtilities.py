@@ -1,3 +1,5 @@
+from emoji import UNICODE_EMOJI
+
 # This module defines basic functions for tokenizing strings.
 specialCharacters = [
     u"!",
@@ -31,6 +33,8 @@ specialCharacters = [
     u"£",
     u"€",
     u"…",
+    u"’",
+    u"”",
 ]
 # It would probably be best to check for some of the symbols at the end of a string and strip (in a loop) appropriately.
 # That would ensure that words like "sh!t" would be tokenized properly.
@@ -38,69 +42,50 @@ specialCharacters = [
 
 
 def tokenize(document, emojis=True):
-    text = document.lower().split()
-    urls = _tokenizeUrls(text)
-    hashtags = _tokenizeHashes(text)
-    mentions = _tokenizeMentions(text)
-    numbers = _tokenizeNumbers(text)
+    text = u"".join(document).lower().split()
+    _tokenizeUrls(text)
+    _tokenizeHashes(text)
+    _tokenizeMentions(text)
+    _tokenizeNumbers(text)
+    # _tokenizePossessives(text)
+    # _tokenizeAllCaps(text)
 
+    tokens = _tokenizeByList(text, specialCharacters)
     if emojis:
-        emojis = _tokenizeEmojis(text)
+        tokens = _tokenizeByList(tokens, UNICODE_EMOJI)
 
-    for special in specialCharacters:
-        text = [u"".join(word.replace(special, f" {special} ").split()) for word in text]
+    return tokens
 
-    return text, urls, hashtags, mentions, numbers
+
+def _tokenizeByList(text, charList):
+    tokens = list()
+
+    for word in text:
+        for char in charList:
+            word = word.replace(char, f" {char} ")
+        tokens.extend(word.split())
+    return tokens
 
 
 def _tokenizeUrls(text):
-    urls = 0
-
     for num, word in enumerate(text):
         if u"http" in word or u"www." in word:
             text[num] = u"<url>"
-            urls += 1
-    return urls
 
 
 def _tokenizeHashes(text):
-    hashtags = 0
-
     for num, word in enumerate(text):
         if word.startswith(u"#"):
             text[num] = u"<hashtag>"
-            hashtags += 1
-    return hashtags
 
 
 def _tokenizeMentions(text):
-    mentions = 0
-
     for num, word in enumerate(text):
         if word.startswith(u"@"):
             text[num] = u"<user>"
-            mentions += 1
-    return mentions
 
 
 def _tokenizeNumbers(text):
-    numbers = 0
-
     for num, word in enumerate(text):
         if word.isdigit():
             text[num] = u"<number>"
-            numbers += 1
-    return numbers
-
-
-def _tokenizeEmojis(text):
-    import emoji
-
-    emojis = 0
-
-    for wordNum, word in enumerate(text):
-        for charNum, char in enumerate(word):
-            if char in emoji.UNICODE_EMOJI:
-                u"".join(text[wordNum].replace(char, f" {char} ").split())
-                emojis += 1
-    return emojis
