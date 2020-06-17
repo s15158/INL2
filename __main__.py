@@ -63,13 +63,11 @@ def main():
             trainable=True,
         )
     )
-    model.add(tf.keras.layers.LSTM(64, return_sequences=True))
+    model.add(tf.keras.layers.LSTM(32, return_sequences=True))
     model.add(tf.keras.layers.Dropout(0.3))
-    model.add(tf.keras.layers.LSTM(32))
-    model.add(tf.keras.layers.Dense(128, activation="relu"))
-    # model.add(tf.keras.layers.Dropout(0.2))
-    model.add(tf.keras.layers.Dense(64, activation="relu"))
-    # model.add(tf.keras.layers.Dropout(0.3))
+    model.add(tf.keras.layers.LSTM(16))
+    model.add(tf.keras.layers.Dense(32, activation="relu"))
+    model.add(tf.keras.layers.Dense(8, activation="relu"))
     model.add(tf.keras.layers.Dense(1, activation="sigmoid"))
     model.compile(
         optimizer=tf.keras.optimizers.Adam(
@@ -77,7 +75,6 @@ def main():
             beta_1=0.9,
             beta_2=0.999,
             epsilon=None,
-            decay=0.01,
             amsgrad=False,
         ),
         loss="binary_crossentropy",
@@ -88,7 +85,7 @@ def main():
         y=labelsTrain,
         validation_data=(testData, labelsTest),
         batch_size=32,
-        epochs=100,
+        epochs=30,
         validation_split=0.3,
     )
 
